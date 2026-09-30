@@ -33,7 +33,4 @@ def load_all_documents(data_dir: str) -> List[Any]:
 
     print(f"[DEBUG] Total loaded documents: {len(documents)}")
     return documents
-
-# Example usage
-# if __name__ == "__main__":
-#     doc    
+   

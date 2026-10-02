@@ -13,6 +13,10 @@ def load_all_documents(data_dir: str) -> List[Any]:
     # Use project root data folder
     data_path = Path(data_dir).resolve()
     print(f"[DEBUG] Data path: {data_path}")
+
+    if not data_path.is_dir():
+        raise FileNotFoundError(f"Data directory not found: {data_path}")
+
     documents = []
 
     # PDF files
@@ -32,5 +36,9 @@ def load_all_documents(data_dir: str) -> List[Any]:
     #txt_files = list
 
     print(f"[DEBUG] Total loaded documents: {len(documents)}")
+
+    if not documents:
+        raise ValueError(f"No documents found in data directory: {data_path}")
+        
     return documents
    

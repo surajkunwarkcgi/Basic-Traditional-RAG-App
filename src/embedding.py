@@ -5,7 +5,7 @@ from src.data_loader import load_all_documents
 import numpy as np
 
 class EmbeddingPipeline:
-    def __init__(self, model_name: str = "all-MiniLm-L6-v2", chunk_size: int = 1000, chunk_overlap: int = 200):
+    def __init__(self, model_name: str = "all-MiniLM-L6-v2", chunk_size: int = 1000, chunk_overlap: int = 200):
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
         self.model = SentenceTransformer(model_name)
@@ -24,7 +24,10 @@ class EmbeddingPipeline:
 
     def embed_chunks(self, chunks: List[Any]) -> np.ndarray:
         texts = [chunk.page_content for chunk in chunks]
-        print(f"[INFO] Generatingembeddings for {len(texts)} chunks...")
+        if not texts:
+            print("[WARN] No chunks to embed, returning empty array.")
+            return np.empty((0, self.model.get_sentence_embedding_dimension()), dtype="float32")
+        print(f"[INFO] Generating embeddings for {len(texts)} chunks...")
         embeddings = self.model.encode(texts, show_progress_bar = True)
         print(f"[INFO] Embeddings shape: {embeddings.shape}")
         return embeddings

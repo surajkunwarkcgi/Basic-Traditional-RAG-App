@@ -3,6 +3,7 @@ import faiss
 import pickle
 import numpy as np
 from typing import List, Any
+from langsmith import traceable
 from src.embedding import EmbeddingPipeline
 from sentence_transformers import SentenceTransformer
 
@@ -29,6 +30,9 @@ class FaissVectorStore:
         print(f"[INFO] Vector store built and saved to {self.persist_dir}")
 
     def add_embeddings(self, embeddings: np.ndarray, metadatas: List[Any] = None):
+        if embeddings.shape[0] == 0:
+            print("[WARN] No embeddings to add, skipping.")
+            return
         dim = embeddings.shape[1]
         if self.index is None:
             self.index = faiss.IndexFlatL2(dim)
@@ -48,19 +52,27 @@ class FaissVectorStore:
     def load(self):
         faiss_path = os.path.join(self.persist_dir, "faiss.index")
         meta_path  = os.path.join(self.persist_dir, "metadata.pkl")
+        if not (os.path.exists(faiss_path) and os.path.exists(meta_path)):
+            raise FileNotFoundError(
+                f"No Faiss index/metadata found in '{self.persist_dir}'. "
+                "Call build_from_documents() first."
+            )
         self.index = faiss.read_index(faiss_path)
         with open(meta_path, "rb") as f:
             self.metadata = pickle.load(f)
         print(f"[INFO] Loaded Faiss index and metadata from {self.persist_dir}")
 
     def search(self, query_embedding: np.ndarray, top_k: int = 5):
+        if self.index is None:
+            raise RuntimeError("Index is not built or loaded. Call build_from_documents() or load() first.")
         D, I = self.index.search(query_embedding, top_k)
         results = []
         for idx, dist in zip(I[0], D[0]):
-            meta = self.metadata[idx] if idx < len(self.metadata) else None
+            meta = self.metadata[idx] if idx != -1 and idx < len(self.metadata) else None
             results.append({"index": idx, "distance": dist, "metadata": meta})
         return results
 
+    @traceable(name="faiss_query", run_type="retriever")
     def query(self, query_text: str, top_k: int = 5):
         print(f"[INFO] Querying vector store for: '{query_text}'")
         query_emb = self.model.encode([query_text]).astype('float32')
